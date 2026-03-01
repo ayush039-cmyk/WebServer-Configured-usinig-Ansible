@@ -47,5 +47,4 @@ Prepare Inventory: Add your server details to inventory.txt.
 
 Execute Playbook:
 
-Bash
 ansible-playbook -i inventory.txt playbook.yaml -e "repository=<your_repo_url>"
