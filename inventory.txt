@@ -1,0 +1,4 @@
+[db_servers]
+centos_db ansible_host=XXX.XXX.XXX.XXX ansible_ssh_private_key_file=/home/xxx/.ssh/key ansible_user=root mysqlservice=mysqld mysql_port=3306 dbname=ecomdb dbuser=ecomuser dbpassword=ecompassword
+[web_servers]
+centos-s-1vcpu-1gb-blr1-01 ansible_host=XXX.XXX.XXX.XXX ansible_ssh_private_key_file=/home/xxx/.ssh/key ansible_user=root httpd_port=80 repository=https://github.com/kodekloudhub/learning-app-ecommerce.git

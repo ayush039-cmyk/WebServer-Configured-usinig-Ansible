@@ -1,0 +1,115 @@
+- name: Download dependencies
+  hosts: all
+  become: yes
+  tasks:
+    - name: install dependencies
+      yum:
+        name:
+          - python3-libselinux
+          - python3-libsemanage
+          - firewalld
+        state: installed
+
+- name: install mariabd in db server
+  hosts: centos_db
+  become: yes
+  tasks:
+    - name: stop and disable nginx to free up port 80
+      systemd:
+        name: nginx
+        state: stopped
+        enabled: no
+      ignore_errors: yes # In case nginx isn't installed on all hosts
+    - name: install mariadb
+      yum:
+        name:
+          - mariadb-server
+          - mariadb-devel
+          - python3-PyMySQL
+        state: installed
+    - name: create conf file
+      copy: src=files/my.cnf  dest=/etc/my.cnf
+    - name: start mariadb
+      systemd:
+            name: mariadb
+            state: started
+            enabled: yes
+    - name: firewall
+      systemd:
+          name: firewalld
+          state: started
+          enabled: yes
+    - name: firewall rules
+      firewalld:
+        port: 3306/tcp
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: move db-source file
+      copy:
+        src: assets/db-load-script.sql
+        dest: /tmp/db-load-script.sql
+
+    - name: load all data
+      shell:
+        mysql -f < /tmp/db-load-script.sql
+
+
+- name: Deploy webapp
+  hosts: centos-s-1vcpu-1gb-blr1-01
+  become: yes
+  tasks:
+        - name: stop and disable nginx to free up port 80
+          systemd:
+              name: nginx
+              state: stopped
+              enabled: no
+          ignore_errors: yes # In case nginx isn't installed on all hosts
+        - name: install httpd
+          yum:
+            name: 
+               - httpd
+               - php
+               - php-mysqlnd
+            state: present
+        - name: install git
+          yum:
+            name: git
+            state: installed
+        - name: start firewall
+          systemd:
+            name: firewalld
+            state: started
+            enabled: yes
+
+        - name: insert firewall rules
+          firewalld:
+            port: 80/tcp
+            permanent: yes
+            state: enabled
+            immediate: yes
+
+        - name: set php as default page
+          tags: .php is the default page now
+          replace:
+            path: /etc/httpd/conf/httpd.conf
+            regexp: 'Directory index index.html'
+            replace: 'Directory index index.php'
+
+        - name: httpd service start
+          systemd:
+            name: httpd
+            state: started
+            enabled: yes
+
+        - name: pick repo
+          git:
+            repo: "{{ repository }}"
+            dest: /var/www/html/
+            force: yes
+
+        - name: Creates the index.php file
+          copy:
+            src: files/index.php
+            dest: /var/www/html/index.php
